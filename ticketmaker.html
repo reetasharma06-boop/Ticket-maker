@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Maker</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>  <!-- Updated library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background: #f0f0f0; }
+        input, button { display: block; margin: 10px 0; padding: 8px; width: 100%; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        #qrcode { margin: 20px 0; text-align: center; }
+        .ticket-preview { display: none; border: 2px dashed #000; padding: 20px; margin: 20px auto; max-width: 400px; background: linear-gradient(to right, #ffeb3b, #fff); box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: left; }
+        .ticket-preview h2 { color: #333; margin-top: 0; }
+        .ticket-preview p { margin: 5px 0; }
+        .fixed-field { background: #e9ecef; color: #6c757d; }
+    </style>
+</head>
+<body>
+    <h1>QR Code Ticket Maker</h1>
+    <p>Enter the holder name (other details are fixed). Generate the QR code, and scan it to reveal the ticket. (Updated for better mobile support.)</p>
+    
+    <!-- Fixed fields displayed as read-only -->
+    <label>Event Name (Fixed):</label>
+    <input type="text" value="Farewell 2k26" readonly class="fixed-field">
+    
+    <label>Date (Fixed):</label>
+    <input type="text" value="2026-12-31" readonly class="fixed-field">
+    
+    <label>Time (Fixed):</label>
+    <input type="text" value="7:00 PM" readonly class="fixed-field">
+    
+    <!-- Removed manual Seat input -->
+    
+    <label>Holder Name:</label>
+    <input type="text" id="holder" placeholder="e.g., John Doe">
+    
+    <label>Price (Fixed):</label>
+    <input type="text" value="1299" readonly class="fixed-field">
+    
+    <button onclick="generateTicket()">Generate Ticket QR Code</button>
+    
+    <div id="qrcode"></div>
+    <p id="link" style="display:none;">Scan this QR code or click: <a id="ticketLink" href="#" target="_blank">View Ticket</a></p>
+    <p id="fallback" style="display:none; color: red;">QR code failed to generate. Use this link instead: <a id="fallbackLink" href="#" target="_blank">Direct Ticket Link</a></p>
+    
+    <div id="ticketPreview" class="ticket-preview">
+        <h2 id="previewEvent">Farewell 2k26</h2>
+        <p><strong>Date:</strong> <span id="previewDate">2026-12-31</span></p>
+        <p><strong>Time:</strong> <span id="previewTime">7:00 PM</span></p>
+        <p><strong>Seat:</strong> <span id="previewSeat"></span></p>
+        <p><strong>Holder:</strong> <span id="previewHolder"></span></p>
+        <p><strong>Price:</strong> <span id="previewPrice">1299</span></p>
+        <button onclick="downloadTicket()">Download Ticket as Image</button>
+    </div>
+    
+    <script>
+        function generateTicket() {
+            const holder = document.getElementById('holder').value;
+            
+            // Fixed values
+            const event = "Farewell 2k26";
+            const date = "2026-12-31";
+            const time = "7:00 PM";
+            const price = "1299";
+            
+            // Auto-generate 11-digit random seat number
+            const seat = Math.floor(Math.random() * 90000000000) + 10000000000;
+            
+            if (!holder) {
+                alert('Please enter the Holder Name.');
+                return;
+            }
+            
+            // Update preview
+            document.getElementById('previewSeat').textContent = seat;
+            document.getElementById('previewHolder').textContent = holder;
+            document.getElementById('ticketPreview').style.display = 'block';
+            
+            // Create a data URL for the ticket page
+            const ticketHTML = `
+                <!DOCTYPE html>
+                <html>
+                <head><title>Ticket</title><style>body{text-align:center;padding:20px;background:#f0f0f0;}.ticket{border:2px solid #000;padding:20px;margin:20px auto;max-width:400px;background:linear-gradient(to right,#ffeb3b,#fff);box-shadow:0 4px 8px rgba(0,0,0,0.1);text-align:left;}</style></head>
+                <body>
+                <h1>Scan Successful! Your Ticket:</h1>
+                <div class="ticket">
+                <h2>${event}</h2>
+                <p><strong>Date:</strong> ${date}</p>
+                <p><strong>Time:</strong> ${time}</p>
+                <p><strong>Seat:</strong> ${seat}</p>
+                <p><strong>Holder:</strong> ${holder}</p>
+                <p><strong>Price:</strong> ${price}</p>
+                </div>
+                </body>
+                </html>
+            `;
+            
+            const ticketBlob = new Blob([ticketHTML], {type: 'text/html'});
+            const ticketURL = URL.createObjectURL(ticketBlob);
+            
+            // Clear previous QR code and hide fallback
+            document.getElementById('qrcode').innerHTML = '';
+            document.getElementById('fallback').style.display = 'none';
+            
+            try {
+                // Generate QR code with updated library
+                QRCode.toCanvas(document.getElementById('qrcode'), ticketURL, { width: 256, height: 256 }, function (error) {
+                    if (error) {
+                        console.error(error);
+                        alert('QR code generation failed. Try refreshing the page or use a different browser.');
+                        // Show fallback link
+                        document.getElementById('fallbackLink').href = ticketURL;
+                        document.getElementById('fallback').style.display = 'block';
+                    }
+                });
+                
+                // Show link
+                document.getElementById('ticketLink').href = ticketURL;
+                document.getElementById('link').style.display = 'block';
+            } catch (e) {
+                alert('Error generating QR code: ' + e.message);
+                // Show fallback
+                document.getElementById('fallbackLink').href = ticketURL;
+                document.getElementById('fallback').style.display = 'block';
+            }
+        }
+        
+        function downloadTicket() {
+            html2canvas(document.getElementById('ticketPreview')).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'ticket.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            }).catch(e => alert('Download failed: ' + e.message));
+        }
+    </script>
+</body>
+</html>
